@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  rm-boylerplate-mariadb:
+    container_name: rm-mariadb
+    restart: unless-stopped
+    image: mariadb:10.4.20
+    ports:
+      - "${MARIADB_PORT}:3306"
+    volumes:
+      - ./my.cnf:/etc/mysql/my.cnf
+      - /srv/rm/db_backups:/srv/db_backups
+      - rm-mariadb-volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/rm-mariadb-root-password
+      MYSQL_DATABASE: ${MARIADB_DATABASE}
+    command: mysqld --character-set-server=${MARIADB_CHARSET} --collation-server=${MARIADB_CHARSET}_unicode_ci
+    secrets:
+      - rm-mariadb-root-password
+    healthcheck:
+      test: ["CMD", "mysqladmin","-uroot","-p${MARIADB_ROOT_PWD}","ping"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - rm-custom
+
+secrets:
+  rm-mariadb-root-password:
+    file: ./secrets/db-root-password.txt
+
+volumes:
+  rm-mariadb-volume:
+    name: mariadb-data
+    driver: local
+
+networks:
+  rm-custom:
+    name: rm-custom
